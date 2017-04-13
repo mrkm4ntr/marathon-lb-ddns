@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"net/http"
 )
 
 var (
@@ -179,6 +180,23 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to create a client for marathon, error: %s", err)
 	}
+
+	store := file.New()
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		cNames, err := store.ListCNames()
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+		}
+		for _, cName := range cNames {
+			w.Write([]byte(cName + "\n"))
+		}
+	})
+	go func() {
+		if err := http.ListenAndServe(":8080", nil); err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	var values url.Values
 	values = url.Values{"embed": []string{"app.tasks"}}
