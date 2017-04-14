@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"strings"
 	"net/http"
+	"github.com/stretchr/stew/slice"
 )
 
 var (
@@ -50,15 +51,21 @@ func parse(apps []marathon.Application, store store.Store) ([]string, []string, 
 	newCNames := []string{}
 	ipAddresses := []string{}
 
+	prevIPAddresses, err := store.GetIPAddresses()
+	if err != nil {
+		log.Println(err)
+	}
 	prevCNames, err := store.ListCNames()
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 	}
 
 	for _, app := range apps {
 		if app.ID == *lbId && getLBGroup(app.Args) == *group {
 			for _, task := range app.Tasks {
-				ipAddresses = append(ipAddresses, task.IPAddresses[0].IPAddress)
+				if len(task.IPAddresses) > 0 {
+					ipAddresses = append(ipAddresses, task.IPAddresses[0].IPAddress)
+				}
 			}
 		}
 		if (*app.Labels)["HAPROXY_GROUP"] == *group {
@@ -74,29 +81,34 @@ func parse(apps []marathon.Application, store store.Store) ([]string, []string, 
 			}
 		}
 	}
+	if len(prevIPAddresses) == len(ipAddresses) && len(slice.CommonStrings(prevIPAddresses, ipAddresses)) == len(prevIPAddresses) {
+		ipAddresses = []string {}
+	}
 	return newCNames, prevCNames, ipAddresses
 }
 
 func changeDNSRecords(newCNames []string, removedCNames []string, ipAddresses []string) error {
 	changes := []*route53.Change{}
 
-	resourceRecordSet := &route53.ResourceRecordSet{
-		Name: domain,
-		Type: aws.String("A"),
-		TTL:  aws.Int64(300),
-	}
+	if len(ipAddresses) > 0 {
+		resourceRecordSet := &route53.ResourceRecordSet{
+			Name: domain,
+			Type: aws.String("A"),
+			TTL:  aws.Int64(300),
+		}
 
-	resourceRecords := []*route53.ResourceRecord{}
-	for _, ipAddress := range ipAddresses {
-		v := ipAddress
-		resourceRecords = append(resourceRecords, &route53.ResourceRecord{Value: &v})
-	}
+		resourceRecords := []*route53.ResourceRecord{}
+		for _, ipAddress := range ipAddresses {
+			v := ipAddress
+			resourceRecords = append(resourceRecords, &route53.ResourceRecord{Value: &v})
+		}
 
-	resourceRecordSet.SetResourceRecords(resourceRecords)
-	changes = append(changes, &route53.Change{
-		Action:            aws.String("UPSERT"),
-		ResourceRecordSet: resourceRecordSet,
-	})
+		resourceRecordSet.SetResourceRecords(resourceRecords)
+		changes = append(changes, &route53.Change{
+			Action:            aws.String("UPSERT"),
+			ResourceRecordSet: resourceRecordSet,
+		})
+	}
 
 	for _, cName := range newCNames {
 		v := cName
@@ -173,6 +185,11 @@ func execute(applications *marathon.Applications) {
 			log.Println(err)
 		}
 	}
+	if len(ipAddresses) > 0 {
+		if err := store.SetIPAddresses(ipAddresses); err != nil {
+			log.Println(err)
+		}
+	}
 }
 
 func main() {
@@ -193,9 +210,19 @@ func main() {
 		if err != nil {
 			log.Println(err)
 			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		for _, cName := range cNames {
 			w.Write([]byte(cName + "\n"))
+		}
+		ipAddresses, err := store.GetIPAddresses()
+		if err != nil {
+			log.Println(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		for _, ipAddress := range ipAddresses {
+			w.Write([]byte(ipAddress + "\n"))
 		}
 	})
 	go func() {

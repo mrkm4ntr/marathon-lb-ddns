@@ -9,14 +9,40 @@ type fileStore struct {
 	domain string
 }
 
+var aFile = ".a"
 var cNameFile = ".cnames"
 
 func (*fileStore) GetIPAddresses() ([]string, error) {
-	panic("implement me")
+	_, err := os.Stat(aFile)
+	if err != nil {
+		return []string{}, nil
+	}
+	fp, err := os.Open(aFile)
+	if err != nil {
+		return nil, err
+	}
+	defer fp.Close()
+
+	ipAddresses := []string{}
+	scanner := bufio.NewScanner(fp)
+	for scanner.Scan() {
+		ipAddresses = append(ipAddresses, scanner.Text())
+	}
+	return ipAddresses, err
 }
 
-func (*fileStore) SetIPAddresses([]string) error {
-	panic("implement me")
+func (*fileStore) SetIPAddresses(ipAddresses []string) error {
+	fp, err := os.OpenFile(aFile, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer fp.Close()
+	writer := bufio.NewWriter(fp)
+	for _, ipAddress := range ipAddresses {
+		writer.WriteString(ipAddress + "\n")
+	}
+	writer.Flush()
+	return nil
 }
 
 func (*fileStore) ListCNames() ([]string, error) {
