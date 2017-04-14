@@ -1,5 +1,5 @@
 hash: 566d336d7937b21966ea49d94aa6c368b18018d24e45d72da330226921c5812e
-updated: 2017-04-12T14:58:14.824540233+09:00
+updated: 2017-04-14T23:37:35.148136813+09:00
 imports:
 - name: github.com/aws/aws-sdk-go
   version: 7be45195c3af1b54a609812f90c05a7e492e2491
@@ -40,4 +40,8 @@ imports:
   - query
 - name: github.com/jmespath/go-jmespath
   version: bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d
+- name: github.com/stretchr/stew
+  version: 80ef0842b48b329a6120607c817a85aff5a2ec71
+  subpackages:
+  - slice
 testImports: []

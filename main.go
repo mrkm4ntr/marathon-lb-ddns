@@ -8,12 +8,11 @@ import (
 	"github.com/gambol99/go-marathon"
 	"github.com/mrkm4ntr/marathon-lb-ddns/store"
 	"github.com/mrkm4ntr/marathon-lb-ddns/store/file"
+	"github.com/stretchr/stew/slice"
 	"log"
+	"net/http"
 	"net/url"
 	"regexp"
-	"strings"
-	"net/http"
-	"github.com/stretchr/stew/slice"
 )
 
 var (
@@ -82,7 +81,7 @@ func parse(apps []marathon.Application, store store.Store) ([]string, []string, 
 		}
 	}
 	if len(prevIPAddresses) == len(ipAddresses) && len(slice.CommonStrings(prevIPAddresses, ipAddresses)) == len(prevIPAddresses) {
-		ipAddresses = []string {}
+		ipAddresses = []string{}
 	}
 	return newCNames, prevCNames, ipAddresses
 }
@@ -171,7 +170,7 @@ func execute(applications *marathon.Applications) {
 	store := file.New()
 	newCNames, removedCNames, ipAddresses := parse(applications.Apps, store)
 
-	if err:= changeDNSRecords(newCNames, removedCNames, ipAddresses); err != nil {
+	if err := changeDNSRecords(newCNames, removedCNames, ipAddresses); err != nil {
 		log.Println(err)
 	}
 
