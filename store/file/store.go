@@ -39,12 +39,12 @@ func (*fileStore) ListCNames() ([]string, error) {
 }
 
 func (*fileStore) AddCName(domain string) error {
-	file, err := os.OpenFile(cNameFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+	fp, err := os.OpenFile(cNameFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-	writer := bufio.NewWriter(file)
+	defer fp.Close()
+	writer := bufio.NewWriter(fp)
 	writer.WriteString(domain + "\n")
 	writer.Flush()
 	return nil
@@ -55,12 +55,12 @@ func (fs *fileStore) RemoveCName(domain string) error {
 	if err != nil {
 		return err
 	}
-	file, err := os.OpenFile("CNames", os.O_WRONLY, 0644)
+	fp, err := os.OpenFile(cNameFile, os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
-	defer file.Close()
-	writer := bufio.NewWriter(file)
+	defer fp.Close()
+	writer := bufio.NewWriter(fp)
 	for _, cName := range cNames {
 		if cName != domain {
 			writer.WriteString(cName + "\n")

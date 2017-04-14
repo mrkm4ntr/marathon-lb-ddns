@@ -159,13 +159,19 @@ func execute(applications *marathon.Applications) {
 	store := file.New()
 	newCNames, removedCNames, ipAddresses := parse(applications.Apps, store)
 
-	changeDNSRecords(newCNames, removedCNames, ipAddresses)
+	if err:= changeDNSRecords(newCNames, removedCNames, ipAddresses); err != nil {
+		log.Println(err)
+	}
 
 	for _, cName := range newCNames {
-		store.AddCName(cName)
+		if err := store.AddCName(cName); err != nil {
+			log.Println(err)
+		}
 	}
 	for _, cName := range removedCNames {
-		store.RemoveCName(cName)
+		if err := store.RemoveCName(cName); err != nil {
+			log.Println(err)
+		}
 	}
 }
 
