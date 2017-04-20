@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/gambol99/go-marathon"
 	"github.com/mrkm4ntr/marathon-lb-ddns/store"
-	"github.com/mrkm4ntr/marathon-lb-ddns/store/file"
+	"github.com/mrkm4ntr/marathon-lb-ddns/store/zookeeper"
 	"github.com/stretchr/stew/slice"
 	"log"
 	"net/http"
@@ -21,6 +21,7 @@ var (
 	domain      = flag.String("domain", "marathon-lb.example.com.", "")
 	zoneId      = flag.String("z", "", "zoneId")
 	lbId        = flag.String("lb-id", "/marathon-lb", "Id of marathon-lb")
+	zk          = flag.String("zk", "", "Url of zookeeper")
 )
 
 func remove(arr []string, target string) ([]string, bool) {
@@ -167,7 +168,8 @@ func changeDNSRecords(newCNames []string, removedCNames []string, ipAddresses []
 }
 
 func execute(applications *marathon.Applications) {
-	store := file.New()
+	store := zookeeper.GetInstance()
+
 	newCNames, removedCNames, ipAddresses := parse(applications.Apps, store)
 
 	if err := changeDNSRecords(newCNames, removedCNames, ipAddresses); err != nil {
@@ -203,7 +205,10 @@ func main() {
 		log.Fatalf("Failed to create a client for marathon, error: %s", err)
 	}
 
-	store := file.New()
+	store := zookeeper.GetInstance()
+	store.Connect(*zk)
+	store.Bootstrap(*group)
+
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		cNames, err := store.ListCNames()
 		if err != nil {

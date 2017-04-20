@@ -5,6 +5,8 @@
     "your hosted zone id",
     "-domain",
     "marathon-lb.dev.example.com."
+    "-zk",
+    "exhibitor-dcos.marathon.mesos:31886"
   ],
   "env": {
     "AWS_SECRET_ACCESS_KEY": "your aws secret access key",

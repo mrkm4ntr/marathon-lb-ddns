@@ -5,6 +5,7 @@ import (
 	"log"
 	"strings"
 	"time"
+	"sync"
 )
 
 type zkStore struct {
@@ -47,13 +48,14 @@ func (zs *zkStore) RemoveCName(cName string) error {
 	return zs.conn.Delete("/"+zs.group+"/CNAME/"+cName, 0)
 }
 
+var once = new(sync.Once)
+
 func (zs *zkStore) Connect(url string) error {
-	conn, _, err := zk.Connect([]string{url}, time.Second)
-	if err != nil {
-		return err
-	}
-	zs.conn = conn
-	return nil
+	var err error
+	once.Do(func() {
+		zs.conn, _, err = zk.Connect([]string{url}, time.Second)
+	})
+	return err
 }
 
 func (zs *zkStore) Bootstrap(group string) {
